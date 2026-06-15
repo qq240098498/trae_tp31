@@ -69,4 +69,20 @@ export type PlatformInfo = {
   name: string;
   icon: string;
   color: string;
+  defaultReturnDays?: number;
 };
+
+export interface ReturnSettings {
+  platformReturnDays: Record<string, number>;
+  remindersEnabled: boolean;
+  reminderDaysBefore: number[];
+}
+
+export interface ReturnDeadlineInfo {
+  remainingDays: number;
+  deadlineDate: Date;
+  isExpired: boolean;
+  isUrgent: boolean;
+  needsReminder: boolean;
+  reminderLevel: 'none' | 'warning' | 'critical';
+}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Layers, Download, Upload, CheckSquare, X, Package as PackageIcon } from 'lucide-react';
+import { Plus, Layers, Download, Upload, CheckSquare, X, Package as PackageIcon, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePackageStore, useTopLevelPackages, useStatusCounts } from '@/store/usePackageStore';
 import StatisticsBar from '@/components/StatisticsBar';
@@ -9,6 +9,8 @@ import PackageForm from '@/components/PackageForm';
 import Modal from '@/components/Modal';
 import BatchImportForm from '@/components/BatchImportForm';
 import MergePanel from '@/components/MergePanel';
+import ReturnReminderBanner from '@/components/ReturnReminderBanner';
+import ReturnSettingsPanel from '@/components/ReturnSettingsPanel';
 import type { PackageStatus } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -32,6 +34,7 @@ export default function PackageList() {
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBatchModal, setShowBatchModal] = useState(false);
+  const [showReturnSettings, setShowReturnSettings] = useState(false);
   const [batchTab, setBatchTab] = useState<TabMode>('import');
 
   const handleExport = () => {
@@ -146,6 +149,13 @@ export default function PackageList() {
                       <Layers className="w-5 h-5" />
                     </button>
                     <button
+                      onClick={() => setShowReturnSettings(true)}
+                      className="p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-slate-400 hover:text-white"
+                      title="退货设置"
+                    >
+                      <Clock className="w-5 h-5" />
+                    </button>
+                    <button
                       onClick={() => setShowAddModal(true)}
                       className="btn-primary flex items-center gap-2"
                     >
@@ -220,6 +230,10 @@ export default function PackageList() {
             )}
 
             <StatisticsBar />
+
+            <div className="mt-4">
+              <ReturnReminderBanner />
+            </div>
           </div>
         </header>
 
@@ -323,6 +337,15 @@ export default function PackageList() {
         {batchTab === 'merge' && (
           <MergePanel onSuccess={() => setShowBatchModal(false)} />
         )}
+      </Modal>
+
+      <Modal
+        isOpen={showReturnSettings}
+        onClose={() => setShowReturnSettings(false)}
+        title="退货倒计时设置"
+        size="lg"
+      >
+        <ReturnSettingsPanel onClose={() => setShowReturnSettings(false)} />
       </Modal>
     </div>
   );

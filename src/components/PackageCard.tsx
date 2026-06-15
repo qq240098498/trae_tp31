@@ -1,12 +1,14 @@
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, PackageOpen, Check, Copy, Trash2, Layers, Pencil } from 'lucide-react';
+import { ChevronRight, PackageOpen, Check, Copy, Trash2, Layers, Pencil, Clock, AlertTriangle } from 'lucide-react';
 import { usePackageStore, useChildPackages } from '@/store/usePackageStore';
+import { useReturnSettingsStore } from '@/store/useReturnSettingsStore';
 import type { Package } from '@/types';
 import StatusBadge from './StatusBadge';
 import { getPlatformIcon } from '@/utils/platformUtils';
 import { formatDate, getArrivalText, canMarkAsOpened } from '@/utils/statusUtils';
 import { formatTrackingNumber } from '@/utils/carrierUtils';
-import { useState } from 'react';
+import { getReturnDeadlineInfo, getReturnDeadlineText, formatReturnDeadline } from '@/utils/returnUtils';
+import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import Modal from './Modal';
 import EditPackageForm from './EditPackageForm';
@@ -19,6 +21,7 @@ interface PackageCardProps {
 export default function PackageCard({ pkg, index }: PackageCardProps) {
   const navigate = useNavigate();
   const { batchMode, selectedIds, toggleSelection, markAsOpened, deletePackage } = usePackageStore();
+  const { getReturnDaysForPlatform } = useReturnSettingsStore();
   const childPackages = useChildPackages(pkg.id);
   const [showChildren, setShowChildren] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -26,6 +29,11 @@ export default function PackageCard({ pkg, index }: PackageCardProps) {
   const isSelected = selectedIds.includes(pkg.id);
   const PlatformIcon = getPlatformIcon(pkg.platform);
   const hasChildren = pkg.childIds.length > 0;
+
+  const returnDeadlineInfo = useMemo(() => {
+    const returnDays = getReturnDaysForPlatform(pkg.platform);
+    return getReturnDeadlineInfo(pkg, returnDays);
+  }, [pkg, getReturnDaysForPlatform]);
 
   const handleCopyTracking = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -144,19 +152,44 @@ export default function PackageCard({ pkg, index }: PackageCardProps) {
             )}
             
             <div className="flex items-center justify-between mt-3">
-              <div className="text-sm">
-                <span className="text-slate-400">
-                  {getArrivalText(pkg.estimatedArrival, pkg.status)}
-                </span>
-                {pkg.estimatedArrival && pkg.status !== 'delivered' && pkg.status !== 'opened' && (
-                  <span className="ml-2 text-slate-500">
-                    ({formatDate(pkg.estimatedArrival)})
+              <div className="text-sm space-y-1">
+                <div>
+                  <span className="text-slate-400">
+                    {getArrivalText(pkg.estimatedArrival, pkg.status)}
                   </span>
-                )}
-                {pkg.openedDate && (
-                  <span className="ml-2 text-emerald-400">
-                    拆包于 {formatDate(pkg.openedDate)}
-                  </span>
+                  {pkg.estimatedArrival && pkg.status !== 'delivered' && pkg.status !== 'opened' && (
+                    <span className="ml-2 text-slate-500">
+                      ({formatDate(pkg.estimatedArrival)})
+                    </span>
+                  )}
+                  {pkg.openedDate && (
+                    <span className="ml-2 text-emerald-400">
+                      拆包于 {formatDate(pkg.openedDate)}
+                    </span>
+                  )}
+                </div>
+                {returnDeadlineInfo && (
+                  <div className={cn(
+                    'flex items-center gap-1.5 text-xs',
+                    returnDeadlineInfo.isExpired ? 'text-slate-500' :
+                    returnDeadlineInfo.reminderLevel === 'critical' ? 'text-red-400' :
+                    returnDeadlineInfo.reminderLevel === 'warning' ? 'text-amber-400' :
+                    'text-slate-500'
+                  )}>
+                    {returnDeadlineInfo.isExpired ? (
+                      <Clock className="w-3.5 h-3.5" />
+                    ) : returnDeadlineInfo.isUrgent ? (
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                    ) : (
+                      <Clock className="w-3.5 h-3.5" />
+                    )}
+                    <span>
+                      {getReturnDeadlineText(returnDeadlineInfo)}
+                    </span>
+                    <span className="text-slate-600">
+                      · 截止 {formatReturnDeadline(returnDeadlineInfo.deadlineDate)}
+                    </span>
+                  </div>
                 )}
               </div>
               
