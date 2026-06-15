@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, PackageOpen, Check, Copy, Trash2, Layers } from 'lucide-react';
+import { ChevronRight, PackageOpen, Check, Copy, Trash2, Layers, Pencil } from 'lucide-react';
 import { usePackageStore, useChildPackages } from '@/store/usePackageStore';
 import type { Package } from '@/types';
 import StatusBadge from './StatusBadge';
@@ -8,6 +8,8 @@ import { formatDate, getArrivalText, canMarkAsOpened } from '@/utils/statusUtils
 import { formatTrackingNumber } from '@/utils/carrierUtils';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import Modal from './Modal';
+import EditPackageForm from './EditPackageForm';
 
 interface PackageCardProps {
   pkg: Package;
@@ -20,6 +22,7 @@ export default function PackageCard({ pkg, index }: PackageCardProps) {
   const childPackages = useChildPackages(pkg.id);
   const [showChildren, setShowChildren] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const isSelected = selectedIds.includes(pkg.id);
   const PlatformIcon = getPlatformIcon(pkg.platform);
   const hasChildren = pkg.childIds.length > 0;
@@ -45,6 +48,11 @@ export default function PackageCard({ pkg, index }: PackageCardProps) {
     }
   };
 
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowEditModal(true);
+  };
+
   const handleCardClick = () => {
     if (batchMode) {
       toggleSelection(pkg.id);
@@ -54,6 +62,7 @@ export default function PackageCard({ pkg, index }: PackageCardProps) {
   };
 
   const statusBorderColor = {
+    pending: 'border-l-slate-500',
     shipped: 'border-l-amber-500',
     in_transit: 'border-l-blue-500',
     out_for_delivery: 'border-l-violet-500',
@@ -182,6 +191,14 @@ export default function PackageCard({ pkg, index }: PackageCardProps) {
                     )}
                     
                     <button
+                      onClick={handleEdit}
+                      className="p-2 rounded-lg hover:bg-blue-500/20 text-slate-400 hover:text-blue-400 transition-colors"
+                      title="编辑"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    
+                    <button
                       onClick={handleDelete}
                       className="p-2 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors"
                       title="删除"
@@ -230,6 +247,18 @@ export default function PackageCard({ pkg, index }: PackageCardProps) {
           ))}
         </div>
       )}
+      
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        title="编辑包裹"
+        size="md"
+      >
+        <EditPackageForm
+          pkg={pkg}
+          onSuccess={() => setShowEditModal(false)}
+        />
+      </Modal>
     </div>
   );
 }

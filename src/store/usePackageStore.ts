@@ -35,14 +35,38 @@ export const usePackageStore = create<PackageStore>()(
 
       addPackage: (pkgData) => {
         let newPkg: Package;
+        const now = new Date();
         
         if (pkgData.trackingNumber) {
-          newPkg = createMockPackage(
-            pkgData.trackingNumber,
-            pkgData.platform,
-            pkgData.productName,
-            3
-          );
+          newPkg = {
+            id: generateId(),
+            trackingNumber: pkgData.trackingNumber.replace(/\s/g, ''),
+            carrier: pkgData.carrier || '',
+            platform: pkgData.platform,
+            productName: pkgData.productName,
+            status: 'pending',
+            estimatedArrival: pkgData.estimatedArrival,
+            shippedDate: null,
+            deliveredDate: null,
+            openedDate: null,
+            isOpened: false,
+            notes: pkgData.notes || '',
+            parentId: null,
+            childIds: [],
+            createdAt: now,
+            updatedAt: now,
+            logisticsEvents: [
+              {
+                id: generateId(),
+                packageId: '',
+                status: 'pending',
+                location: '',
+                description: '等待商家发货',
+                timestamp: now,
+              },
+            ],
+          };
+          newPkg.logisticsEvents[0].packageId = newPkg.id;
         } else {
           newPkg = createManualPackage(
             pkgData.platform,
@@ -51,14 +75,6 @@ export const usePackageStore = create<PackageStore>()(
             pkgData.notes
           );
         }
-
-        newPkg = {
-          ...newPkg,
-          ...pkgData,
-          id: generateId(),
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
 
         set((state) => ({
           packages: [newPkg, ...state.packages],
@@ -292,6 +308,7 @@ export const usePackageStore = create<PackageStore>()(
 
 function getStatusDescription(status: PackageStatus): string {
   const descriptions: Record<PackageStatus, string> = {
+    pending: '等待商家发货',
     shipped: '商家已发货',
     in_transit: '包裹运输中',
     out_for_delivery: '包裹正在派送中',
@@ -345,6 +362,7 @@ export function useStatusCounts() {
   
   return {
     total: packages.length,
+    pending: packages.filter(p => p.status === 'pending').length,
     shipped: packages.filter(p => p.status === 'shipped').length,
     in_transit: packages.filter(p => p.status === 'in_transit').length,
     out_for_delivery: packages.filter(p => p.status === 'out_for_delivery').length,

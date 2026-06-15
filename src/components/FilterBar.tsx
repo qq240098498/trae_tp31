@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 
 const filterOptions: { status: FilterStatus; label: string }[] = [
   { status: 'all', label: '全部' },
+  { status: 'pending', label: '待发货' },
   { status: 'shipped', label: '已发货' },
   { status: 'in_transit', label: '运输中' },
   { status: 'out_for_delivery', label: '派送中' },

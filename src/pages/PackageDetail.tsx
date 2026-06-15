@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Copy, Check, Trash2, PackageOpen, Calendar, Truck, ShoppingBag, Building, FileText, Layers, Unlink } from 'lucide-react';
+import { ArrowLeft, Copy, Check, Trash2, PackageOpen, Calendar, Truck, ShoppingBag, Building, FileText, Layers, Unlink, Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { usePackageStore, usePackageById, useChildPackages } from '@/store/usePackageStore';
 import StatusBadge from '@/components/StatusBadge';
@@ -9,6 +9,8 @@ import { formatDate, formatDateTime, getArrivalText, canMarkAsOpened, getNextSta
 import { formatTrackingNumber } from '@/utils/carrierUtils';
 import { statusConfig } from '@/utils/statusUtils';
 import { cn } from '@/lib/utils';
+import Modal from '@/components/Modal';
+import EditPackageForm from '@/components/EditPackageForm';
 
 export default function PackageDetail() {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +20,7 @@ export default function PackageDetail() {
   const { markAsOpened, updateStatus, deletePackage, unmergePackage } = usePackageStore();
   const [copied, setCopied] = useState(false);
   const [showChildren, setShowChildren] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   if (!pkg) {
     return (
@@ -128,6 +131,13 @@ export default function PackageDetail() {
               </button>
               
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowEditModal(true)}
+                  className="p-2 rounded-lg hover:bg-blue-500/20 text-slate-400 hover:text-blue-400 transition-colors"
+                  title="编辑"
+                >
+                  <Pencil className="w-5 h-5" />
+                </button>
                 <button
                   onClick={handleDelete}
                   className="p-2 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors"
@@ -322,6 +332,18 @@ export default function PackageDetail() {
           </div>
         </main>
       </div>
+      
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        title="编辑包裹"
+        size="md"
+      >
+        <EditPackageForm
+          pkg={pkg}
+          onSuccess={() => setShowEditModal(false)}
+        />
+      </Modal>
     </div>
   );
 }

@@ -8,6 +8,11 @@ const cities = [
 ];
 
 const eventDescriptions: Record<PackageStatus, string[]> = {
+  pending: [
+    '等待商家发货',
+    '订单已提交，等待发货',
+    '商家正在备货中',
+  ],
   shipped: [
     '商家已发货，等待快递员揽收',
     '包裹已出库，正在等待揽收',
@@ -54,7 +59,7 @@ function generateLogisticsEvents(
   shippedDate: Date
 ): LogisticsEvent[] {
   const events: LogisticsEvent[] = [];
-  const statusOrder: PackageStatus[] = ['shipped', 'in_transit', 'out_for_delivery', 'delivered', 'opened'];
+  const statusOrder: PackageStatus[] = ['pending', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'opened'];
   const targetIndex = statusOrder.indexOf(targetStatus);
   
   let currentDate = new Date(shippedDate);
@@ -98,8 +103,8 @@ export function createMockPackage(
   const estimatedArrival = new Date(shippedDate);
   estimatedArrival.setDate(estimatedArrival.getDate() + estimatedDays);
   
-  const statuses: PackageStatus[] = ['shipped', 'in_transit', 'out_for_delivery', 'delivered'];
-  const statusWeights = [0.1, 0.4, 0.3, 0.2];
+  const statuses: PackageStatus[] = ['pending', 'shipped', 'in_transit', 'out_for_delivery', 'delivered'];
+  const statusWeights = [0.1, 0.1, 0.35, 0.25, 0.2];
   
   let random = Math.random();
   let targetStatus: PackageStatus = 'shipped';
@@ -156,7 +161,7 @@ export function createManualPackage(
   notes: string = ''
 ): Package {
   const id = generateId();
-  const shippedDate = new Date();
+  const createdAt = new Date();
   
   return {
     id,
@@ -164,25 +169,25 @@ export function createManualPackage(
     carrier: '',
     platform,
     productName,
-    status: 'shipped',
+    status: 'pending',
     estimatedArrival,
-    shippedDate,
+    shippedDate: null,
     deliveredDate: null,
     openedDate: null,
     isOpened: false,
     notes,
     parentId: null,
     childIds: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt,
+    updatedAt: createdAt,
     logisticsEvents: [
       {
         id: generateId(),
         packageId: id,
-        status: 'shipped',
+        status: 'pending',
         location: '',
-        description: '商家已发货',
-        timestamp: shippedDate,
+        description: '等待商家发货',
+        timestamp: createdAt,
       },
     ],
   };
@@ -198,9 +203,18 @@ export function generateSamplePackages(): Package[] {
     { tracking: '3123456789012', platform: '淘宝', product: '图书：深入理解计算机系统', days: 3 },
   ];
   
-  return sampleData.map(data => 
+  const mockPackages = sampleData.map(data => 
     createMockPackage(data.tracking, data.platform, data.product, data.days)
   );
+  
+  const pendingPackage = createManualPackage(
+    '淘宝',
+    '预售商品：限定版手办',
+    new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+    '预售商品，预计2周后发货'
+  );
+  
+  return [pendingPackage, ...mockPackages];
 }
 
 export function addLogisticsEvent(
@@ -224,7 +238,9 @@ export function addLogisticsEvent(
     updatedAt: new Date(),
   };
   
-  if (status === 'delivered') {
+  if (status === 'shipped') {
+    updatedPkg.shippedDate = newEvent.timestamp;
+  } else if (status === 'delivered') {
     updatedPkg.deliveredDate = newEvent.timestamp;
   } else if (status === 'opened') {
     updatedPkg.openedDate = newEvent.timestamp;

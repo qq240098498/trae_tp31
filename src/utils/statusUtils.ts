@@ -1,5 +1,5 @@
 import type { PackageStatus } from '@/types';
-import { Package, Truck, MapPin, CheckCircle, PackageOpen } from 'lucide-react';
+import { Clock, Package, Truck, MapPin, CheckCircle, PackageOpen } from 'lucide-react';
 
 export const statusConfig: Record<PackageStatus, {
   label: string;
@@ -9,6 +9,14 @@ export const statusConfig: Record<PackageStatus, {
   icon: typeof Package;
   order: number;
 }> = {
+  pending: {
+    label: '待发货',
+    color: 'text-slate-400',
+    bgColor: 'bg-slate-500/20',
+    borderColor: 'border-slate-500/30',
+    icon: Clock,
+    order: 0,
+  },
   shipped: {
     label: '已发货',
     color: 'text-amber-400',
@@ -51,7 +59,7 @@ export const statusConfig: Record<PackageStatus, {
   },
 };
 
-export const statusList: PackageStatus[] = ['shipped', 'in_transit', 'out_for_delivery', 'delivered', 'opened'];
+export const statusList: PackageStatus[] = ['pending', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'opened'];
 
 export function getNextStatus(current: PackageStatus): PackageStatus | null {
   const currentIndex = statusList.indexOf(current);
@@ -59,6 +67,11 @@ export function getNextStatus(current: PackageStatus): PackageStatus | null {
     return statusList[currentIndex + 1];
   }
   return null;
+}
+
+export function getStatusProgress(status: PackageStatus): number {
+  const currentIndex = statusList.indexOf(status);
+  return Math.round((currentIndex / (statusList.length - 1)) * 100);
 }
 
 export function canMarkAsOpened(status: PackageStatus): boolean {

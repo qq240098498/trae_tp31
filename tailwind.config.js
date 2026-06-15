@@ -18,6 +18,7 @@ export default {
           950: '#0F172A',
         },
         status: {
+          pending: '#64748B',
           shipped: '#F59E0B',
           'in-transit': '#3B82F6',
           'out-for-delivery': '#8B5CF6',

@@ -1,4 +1,4 @@
-export type PackageStatus = 'shipped' | 'in_transit' | 'out_for_delivery' | 'delivered' | 'opened';
+export type PackageStatus = 'pending' | 'shipped' | 'in_transit' | 'out_for_delivery' | 'delivered' | 'opened';
 
 export interface LogisticsEvent {
   id: string;

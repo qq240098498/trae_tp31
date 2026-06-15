@@ -1,8 +1,9 @@
 import { useStatusCounts } from '@/store/usePackageStore';
 import { statusConfig } from '@/utils/statusUtils';
-import { Package, Truck, MapPin, CheckCircle, PackageOpen, Inbox } from 'lucide-react';
+import { Clock, Package, Truck, MapPin, CheckCircle, PackageOpen, Inbox } from 'lucide-react';
 
 const statusIcons = {
+  pending: Clock,
   shipped: Package,
   in_transit: Truck,
   out_for_delivery: MapPin,
@@ -14,6 +15,7 @@ export default function StatisticsBar() {
   const counts = useStatusCounts();
 
   const items = [
+    { key: 'pending', count: counts.pending },
     { key: 'shipped', count: counts.shipped },
     { key: 'in_transit', count: counts.in_transit },
     { key: 'out_for_delivery', count: counts.out_for_delivery },
@@ -22,7 +24,7 @@ export default function StatisticsBar() {
   ] as const;
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
       {items.map(({ key, count }) => {
         const config = statusConfig[key];
         const Icon = statusIcons[key];
