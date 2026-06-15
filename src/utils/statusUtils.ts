@@ -78,6 +78,33 @@ export function canMarkAsOpened(status: PackageStatus): boolean {
   return status === 'delivered';
 }
 
+export function canTransitionTo(current: PackageStatus, target: PackageStatus): boolean {
+  const currentIndex = statusList.indexOf(current);
+  const targetIndex = statusList.indexOf(target);
+  
+  if (targetIndex <= currentIndex) {
+    return false;
+  }
+  
+  if (targetIndex !== currentIndex + 1 && target !== 'opened') {
+    return false;
+  }
+  
+  return true;
+}
+
+export function getValidTransitions(current: PackageStatus): PackageStatus[] {
+  const valid: PackageStatus[] = [];
+  const next = getNextStatus(current);
+  if (next) {
+    valid.push(next);
+  }
+  if (canMarkAsOpened(current)) {
+    valid.push('opened');
+  }
+  return valid;
+}
+
 export function formatDate(date: Date | null | string): string {
   if (!date) return '-';
   

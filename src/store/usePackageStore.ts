@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Package, PackageStatus, FilterStatus, PackageStore } from '@/types';
 import { createMockPackage, createManualPackage, addLogisticsEvent, generateSamplePackages } from '@/utils/mockData';
+import { canTransitionTo } from '@/utils/statusUtils';
 
 function generateId(): string {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -130,11 +131,14 @@ export const usePackageStore = create<PackageStore>()(
 
       updateStatus: (id, status) => {
         set((state) => ({
-          packages: state.packages.map((pkg) =>
-            pkg.id === id
-              ? addLogisticsEvent(pkg, status, getStatusDescription(status))
-              : pkg
-          ),
+          packages: state.packages.map((pkg) => {
+            if (pkg.id !== id) return pkg;
+            if (!canTransitionTo(pkg.status, status)) {
+              console.warn(`Cannot transition from ${pkg.status} to ${status}`);
+              return pkg;
+            }
+            return addLogisticsEvent(pkg, status, getStatusDescription(status));
+          }),
         }));
       },
 
@@ -221,12 +225,16 @@ export const usePackageStore = create<PackageStore>()(
 
       batchUpdateStatus: (ids, status) => {
         set((state) => ({
-          packages: state.packages.map((pkg) =>
-            ids.includes(pkg.id)
-              ? addLogisticsEvent(pkg, status, getStatusDescription(status))
-              : pkg
-          ),
+          packages: state.packages.map((pkg) => {
+            if (!ids.includes(pkg.id)) return pkg;
+            if (!canTransitionTo(pkg.status, status)) {
+              console.warn(`Cannot transition from ${pkg.status} to ${status}`);
+              return pkg;
+            }
+            return addLogisticsEvent(pkg, status, getStatusDescription(status));
+          }),
           selectedIds: [],
+          batchMode: false,
         }));
       },
 

@@ -1,7 +1,7 @@
 import type { LogisticsEvent, PackageStatus } from '@/types';
-import { statusConfig } from '@/utils/statusUtils';
+import { statusConfig, statusList } from '@/utils/statusUtils';
 import { formatDateTime } from '@/utils/statusUtils';
-import { Package, Truck, MapPin, CheckCircle, PackageOpen } from 'lucide-react';
+import { Clock, Package, Truck, MapPin, CheckCircle, PackageOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface LogisticsTimelineProps {
@@ -9,7 +9,7 @@ interface LogisticsTimelineProps {
   currentStatus: PackageStatus;
 }
 
-const statusOrder: PackageStatus[] = ['shipped', 'in_transit', 'out_for_delivery', 'delivered', 'opened'];
+const statusOrder: PackageStatus[] = statusList;
 
 export default function LogisticsTimeline({ events, currentStatus }: LogisticsTimelineProps) {
   const sortedEvents = [...events].sort((a, b) => 
@@ -18,6 +18,7 @@ export default function LogisticsTimeline({ events, currentStatus }: LogisticsTi
 
   const getStatusIcon = (status: PackageStatus, isLatest: boolean) => {
     const iconMap = {
+      pending: Clock,
       shipped: Package,
       in_transit: Truck,
       out_for_delivery: MapPin,
@@ -34,6 +35,7 @@ export default function LogisticsTimeline({ events, currentStatus }: LogisticsTi
         config.bgColor,
         config.borderColor,
         isLatest && 'ring-4 ring-offset-2 ring-offset-slate-950 animate-pulse-slow',
+        isLatest && status === 'pending' && 'ring-slate-500/30',
         isLatest && status === 'delivered' && 'ring-emerald-500/30',
         isLatest && status === 'in_transit' && 'ring-blue-500/30',
         isLatest && status === 'out_for_delivery' && 'ring-violet-500/30',
@@ -109,7 +111,8 @@ export default function LogisticsTimeline({ events, currentStatus }: LogisticsTi
                     color: statusConfig[currentStatus].color.replace('text-', 'rgb(var(--')
                   }}>
                     <span className="w-2 h-2 rounded-full animate-pulse" style={{
-                      backgroundColor: statusConfig[currentStatus].color.includes('amber') ? '#F59E0B' :
+                      backgroundColor: statusConfig[currentStatus].color.includes('slate') ? '#64748B' :
+                        statusConfig[currentStatus].color.includes('amber') ? '#F59E0B' :
                         statusConfig[currentStatus].color.includes('blue') ? '#3B82F6' :
                         statusConfig[currentStatus].color.includes('violet') ? '#8B5CF6' :
                         statusConfig[currentStatus].color.includes('emerald') ? '#10B981' : '#10B981'

@@ -74,7 +74,15 @@ export default function PackageList() {
 
   const handleBatchStatus = (status: PackageStatus) => {
     if (selectedIds.length === 0) return;
-    if (confirm(`确定要将 ${selectedIds.length} 个包裹标记为"${status === 'delivered' ? '已签收' : '已发货'}"吗？`)) {
+    const statusLabels: Record<PackageStatus, string> = {
+      pending: '待发货',
+      shipped: '已发货',
+      in_transit: '运输中',
+      out_for_delivery: '派送中',
+      delivered: '已签收',
+      opened: '已拆包',
+    };
+    if (confirm(`确定要将 ${selectedIds.length} 个包裹标记为"${statusLabels[status]}"吗？\n注意：只有符合状态流转条件的包裹会被更新。`)) {
       batchUpdateStatus(selectedIds, status);
     }
   };
@@ -176,6 +184,12 @@ export default function PackageList() {
                     已选择 <span className="text-white font-semibold">{selectedIds.length}</span> 个包裹
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={() => handleBatchStatus('shipped')}
+                      className="px-4 py-2 bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 transition-colors text-sm"
+                    >
+                      标记已发货
+                    </button>
                     <button
                       onClick={() => handleBatchStatus('in_transit')}
                       className="px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors text-sm"
