@@ -82,6 +82,7 @@ export default function BatchImportForm({ onSuccess }: BatchImportFormProps) {
         deliveredDate: null,
         openedDate: null,
         isOpened: false,
+        returnStatus: 'none' as const,
         notes: '',
         parentId: null,
         childIds: [],

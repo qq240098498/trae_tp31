@@ -1,6 +1,6 @@
-import type { Package, ReturnDeadlineInfo } from '@/types';
+import type { Package, ReturnDeadlineInfo, ReturnStatus } from '@/types';
 import { useReturnSettingsStore } from '@/store/useReturnSettingsStore';
-import { getPlatformDefaultReturnDays } from './platformUtils';
+import { getPlatformDefaultReturnDays, getPlatformReturnPolicyLabel } from './platformUtils';
 
 export function getReturnDeadline(
   deliveredDate: Date | null,
@@ -66,6 +66,8 @@ export function getReturnDeadlineInfo(
     }
   }
   
+  const returnPolicyLabel = getPlatformReturnPolicyLabel(pkg.platform);
+  
   return {
     remainingDays,
     deadlineDate,
@@ -73,6 +75,8 @@ export function getReturnDeadlineInfo(
     isUrgent,
     needsReminder,
     reminderLevel,
+    returnPolicyLabel,
+    returnDays: days,
   };
 }
 
@@ -86,18 +90,57 @@ export function formatReturnDeadline(deadlineDate: Date): string {
 
 export function getReturnDeadlineText(info: ReturnDeadlineInfo): string {
   if (info.isExpired) {
-    return `已过退货期（超期 ${Math.abs(info.remainingDays)} 天）`;
+    return `${info.returnPolicyLabel}已过期（超期 ${Math.abs(info.remainingDays)} 天）`;
   }
   
   if (info.remainingDays === 0) {
-    return '今天是最后退货期限';
+    return `${info.returnPolicyLabel}·今天是最后期限！`;
   }
   
   if (info.remainingDays === 1) {
-    return '还剩 1 天退货期限';
+    return `${info.returnPolicyLabel}·还剩1天`;
   }
   
-  return `还剩 ${info.remainingDays} 天退货期限`;
+  return `${info.returnPolicyLabel}·还剩${info.remainingDays}天`;
+}
+
+export function canRequestReturn(pkg: Package): boolean {
+  if (pkg.returnStatus !== 'none') return false;
+  if (pkg.status !== 'delivered' && pkg.status !== 'opened') return false;
+  if (!pkg.deliveredDate) return false;
+  
+  const returnDays = useReturnSettingsStore.getState().getReturnDaysForPlatform(pkg.platform);
+  const deadline = getReturnDeadline(pkg.deliveredDate, returnDays);
+  if (!deadline) return false;
+  
+  const remaining = getRemainingDays(deadline);
+  return remaining !== null && remaining >= 0;
+}
+
+export function getReturnStatusConfig(status: ReturnStatus): {
+  label: string;
+  color: string;
+  bgColor: string;
+  icon: string;
+} {
+  const config: Record<ReturnStatus, { label: string; color: string; bgColor: string; icon: string }> = {
+    none: { label: '未退货', color: 'text-slate-400', bgColor: 'bg-slate-500/20', icon: 'none' },
+    return_pending: { label: '退货中', color: 'text-amber-400', bgColor: 'bg-amber-500/20', icon: 'pending' },
+    return_shipped: { label: '退货物流中', color: 'text-blue-400', bgColor: 'bg-blue-500/20', icon: 'shipped' },
+    returned: { label: '已退货', color: 'text-emerald-400', bgColor: 'bg-emerald-500/20', icon: 'done' },
+  };
+  return config[status];
+}
+
+export function getReturnGuideSteps(platform: string): { step: number; title: string; description: string }[] {
+  const commonSteps = [
+    { step: 1, title: '申请退货', description: `打开${platform}APP → 我的订单 → 申请退货` },
+    { step: 2, title: '选择退货原因', description: '选择退货原因，如"七天无理由退货"' },
+    { step: 3, title: '等待审核', description: '商家审核退货申请（通常1-2个工作日）' },
+    { step: 4, title: '寄回商品', description: '审核通过后，按提供的地址寄回商品' },
+    { step: 5, title: '确认退款', description: '商家确认收货后，退款将原路返回' },
+  ];
+  return commonSteps;
 }
 
 export function getPackagesWithReturnDeadline(packages: Package[]): Package[] {

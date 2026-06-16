@@ -145,6 +145,7 @@ export function createMockPackage(
     deliveredDate,
     openedDate,
     isOpened,
+    returnStatus: 'none' as const,
     notes: '',
     parentId: null,
     childIds: [],
@@ -175,6 +176,7 @@ export function createManualPackage(
     deliveredDate: null,
     openedDate: null,
     isOpened: false,
+    returnStatus: 'none' as const,
     notes,
     parentId: null,
     childIds: [],
@@ -190,6 +192,47 @@ export function createManualPackage(
         timestamp: createdAt,
       },
     ],
+  };
+}
+
+export function createDeliveredPackage(
+  platform: string,
+  productName: string,
+  daysAgo: number
+): Package {
+  const id = generateId();
+  const deliveredDate = new Date();
+  deliveredDate.setDate(deliveredDate.getDate() - daysAgo);
+  deliveredDate.setHours(10, 0, 0, 0);
+
+  const shippedDate = new Date(deliveredDate);
+  shippedDate.setDate(shippedDate.getDate() - 3);
+
+  const estimatedArrival = new Date(shippedDate);
+  estimatedArrival.setDate(estimatedArrival.getDate() + 3);
+
+  const events = generateLogisticsEvents(id, 'delivered', shippedDate);
+  const lastEvent = events[events.length - 1];
+
+  return {
+    id,
+    trackingNumber: `SF${Math.floor(Math.random() * 10000000000000)}`,
+    carrier: '顺丰速运',
+    platform,
+    productName,
+    status: 'delivered',
+    estimatedArrival,
+    shippedDate,
+    deliveredDate: lastEvent ? lastEvent.timestamp : deliveredDate,
+    openedDate: null,
+    isOpened: false,
+    returnStatus: 'none',
+    notes: '',
+    parentId: null,
+    childIds: [],
+    createdAt: shippedDate,
+    updatedAt: new Date(),
+    logisticsEvents: events,
   };
 }
 
@@ -213,8 +256,12 @@ export function generateSamplePackages(): Package[] {
     new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
     '预售商品，预计2周后发货'
   );
+
+  const deliveredPkg = createDeliveredPackage('淘宝', '纯棉T恤', 5);
+  const deliveredPkg2 = createDeliveredPackage('京东', '机械键盘', 1);
+  const deliveredPkg3 = createDeliveredPackage('天猫', '护肤品套装', 3);
   
-  return [pendingPackage, ...mockPackages];
+  return [pendingPackage, deliveredPkg, deliveredPkg2, deliveredPkg3, ...mockPackages];
 }
 
 export function addLogisticsEvent(

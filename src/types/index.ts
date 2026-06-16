@@ -1,5 +1,7 @@
 export type PackageStatus = 'pending' | 'shipped' | 'in_transit' | 'out_for_delivery' | 'delivered' | 'opened';
 
+export type ReturnStatus = 'none' | 'return_pending' | 'return_shipped' | 'returned';
+
 export interface LogisticsEvent {
   id: string;
   packageId: string;
@@ -21,6 +23,7 @@ export interface Package {
   deliveredDate: Date | null;
   openedDate: Date | null;
   isOpened: boolean;
+  returnStatus: ReturnStatus;
   notes: string;
   parentId: string | null;
   childIds: string[];
@@ -57,6 +60,7 @@ export interface PackageStore {
   setBatchMode: (enabled: boolean) => void;
   exportData: () => string;
   importData: (json: string) => boolean;
+  updateReturnStatus: (id: string, returnStatus: ReturnStatus) => void;
 }
 
 export type CarrierInfo = {
@@ -70,6 +74,7 @@ export type PlatformInfo = {
   icon: string;
   color: string;
   defaultReturnDays?: number;
+  returnPolicyLabel?: string;
 };
 
 export interface ReturnSettings {
@@ -85,4 +90,6 @@ export interface ReturnDeadlineInfo {
   isUrgent: boolean;
   needsReminder: boolean;
   reminderLevel: 'none' | 'warning' | 'critical';
+  returnPolicyLabel: string;
+  returnDays: number;
 }

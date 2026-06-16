@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Package, PackageStatus, FilterStatus, PackageStore } from '@/types';
+import type { Package, PackageStatus, FilterStatus, PackageStore, ReturnStatus } from '@/types';
 import { createMockPackage, createManualPackage, addLogisticsEvent, generateSamplePackages } from '@/utils/mockData';
 import { canTransitionTo } from '@/utils/statusUtils';
 
@@ -11,6 +11,7 @@ function generateId(): string {
 function reviveDates(pkg: Package): Package {
   return {
     ...pkg,
+    returnStatus: pkg.returnStatus || 'none',
     estimatedArrival: pkg.estimatedArrival ? new Date(pkg.estimatedArrival) : null,
     shippedDate: pkg.shippedDate ? new Date(pkg.shippedDate) : null,
     deliveredDate: pkg.deliveredDate ? new Date(pkg.deliveredDate) : null,
@@ -51,6 +52,7 @@ export const usePackageStore = create<PackageStore>()(
             deliveredDate: null,
             openedDate: null,
             isOpened: false,
+            returnStatus: 'none',
             notes: pkgData.notes || '',
             parentId: null,
             childIds: [],
@@ -298,6 +300,14 @@ export const usePackageStore = create<PackageStore>()(
         } catch {
           return false;
         }
+      },
+
+      updateReturnStatus: (id, returnStatus) => {
+        set((state) => ({
+          packages: state.packages.map((pkg) =>
+            pkg.id === id ? { ...pkg, returnStatus, updatedAt: new Date() } : pkg
+          ),
+        }));
       },
     }),
     {

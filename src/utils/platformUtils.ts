@@ -3,17 +3,17 @@ import { ShoppingBag, ShoppingCart, Store, Gift, Package, Globe } from 'lucide-r
 import type { LucideIcon } from 'lucide-react';
 
 export const platforms: PlatformInfo[] = [
-  { name: '淘宝', icon: 'ShoppingBag', color: '#FF5000', defaultReturnDays: 7 },
-  { name: '天猫', icon: 'ShoppingCart', color: '#FF0036', defaultReturnDays: 7 },
-  { name: '京东', icon: 'Store', color: '#E4393C', defaultReturnDays: 7 },
-  { name: '拼多多', icon: 'Gift', color: '#E02E24', defaultReturnDays: 7 },
-  { name: '抖音', icon: 'Package', color: '#000000', defaultReturnDays: 7 },
-  { name: '快手', icon: 'Package', color: '#FF4906', defaultReturnDays: 7 },
-  { name: '唯品会', icon: 'ShoppingBag', color: '#F25D8E', defaultReturnDays: 7 },
-  { name: '苏宁', icon: 'Store', color: '#FCD800', defaultReturnDays: 7 },
-  { name: '小米商城', icon: 'Package', color: '#FF6900', defaultReturnDays: 7 },
-  { name: '华为商城', icon: 'Package', color: '#C8102E', defaultReturnDays: 7 },
-  { name: '其他', icon: 'Globe', color: '#6B7280', defaultReturnDays: 7 },
+  { name: '淘宝', icon: 'ShoppingBag', color: '#FF5000', defaultReturnDays: 7, returnPolicyLabel: '7天无理由退货' },
+  { name: '天猫', icon: 'ShoppingCart', color: '#FF0036', defaultReturnDays: 7, returnPolicyLabel: '7天无理由退货' },
+  { name: '京东', icon: 'Store', color: '#E4393C', defaultReturnDays: 7, returnPolicyLabel: '7天无理由退货' },
+  { name: '拼多多', icon: 'Gift', color: '#E02E24', defaultReturnDays: 7, returnPolicyLabel: '7天无理由退货' },
+  { name: '抖音', icon: 'Package', color: '#000000', defaultReturnDays: 7, returnPolicyLabel: '7天无理由退货' },
+  { name: '快手', icon: 'Package', color: '#FF4906', defaultReturnDays: 7, returnPolicyLabel: '7天无理由退货' },
+  { name: '唯品会', icon: 'ShoppingBag', color: '#F25D8E', defaultReturnDays: 7, returnPolicyLabel: '7天无理由退货' },
+  { name: '苏宁', icon: 'Store', color: '#FCD800', defaultReturnDays: 7, returnPolicyLabel: '7天无理由退货' },
+  { name: '小米商城', icon: 'Package', color: '#FF6900', defaultReturnDays: 7, returnPolicyLabel: '7天无理由退货' },
+  { name: '华为商城', icon: 'Package', color: '#C8102E', defaultReturnDays: 7, returnPolicyLabel: '7天无理由退货' },
+  { name: '其他', icon: 'Globe', color: '#6B7280', defaultReturnDays: 7, returnPolicyLabel: '7天无理由退货' },
 ];
 
 export const DEFAULT_RETURN_DAYS = 7;
@@ -44,4 +44,9 @@ export function getPlatformColor(platformName: string): string {
 export function getPlatformDefaultReturnDays(platformName: string): number {
   const info = getPlatformInfo(platformName);
   return info.defaultReturnDays || DEFAULT_RETURN_DAYS;
+}
+
+export function getPlatformReturnPolicyLabel(platformName: string): string {
+  const info = getPlatformInfo(platformName);
+  return info.returnPolicyLabel || `${info.defaultReturnDays || DEFAULT_RETURN_DAYS}天退货`;
 }

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, PackageOpen, Check, Copy, Trash2, Layers, Pencil, Clock, AlertTriangle } from 'lucide-react';
+import { ChevronRight, PackageOpen, Check, Copy, Trash2, Layers, Pencil, Clock, AlertTriangle, RotateCcw } from 'lucide-react';
 import { usePackageStore, useChildPackages } from '@/store/usePackageStore';
 import { useReturnSettingsStore } from '@/store/useReturnSettingsStore';
 import type { Package } from '@/types';
@@ -7,7 +7,7 @@ import StatusBadge from './StatusBadge';
 import { getPlatformIcon } from '@/utils/platformUtils';
 import { formatDate, getArrivalText, canMarkAsOpened } from '@/utils/statusUtils';
 import { formatTrackingNumber } from '@/utils/carrierUtils';
-import { getReturnDeadlineInfo, getReturnDeadlineText, formatReturnDeadline } from '@/utils/returnUtils';
+import { getReturnDeadlineInfo, getReturnDeadlineText, formatReturnDeadline, canRequestReturn, getReturnStatusConfig } from '@/utils/returnUtils';
 import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import Modal from './Modal';
@@ -20,7 +20,7 @@ interface PackageCardProps {
 
 export default function PackageCard({ pkg, index }: PackageCardProps) {
   const navigate = useNavigate();
-  const { batchMode, selectedIds, toggleSelection, markAsOpened, deletePackage } = usePackageStore();
+  const { batchMode, selectedIds, toggleSelection, markAsOpened, deletePackage, updateReturnStatus } = usePackageStore();
   const { getReturnDaysForPlatform } = useReturnSettingsStore();
   const childPackages = useChildPackages(pkg.id);
   const [showChildren, setShowChildren] = useState(false);
@@ -34,6 +34,10 @@ export default function PackageCard({ pkg, index }: PackageCardProps) {
     const returnDays = getReturnDaysForPlatform(pkg.platform);
     return getReturnDeadlineInfo(pkg, returnDays);
   }, [pkg, getReturnDaysForPlatform]);
+
+  const showReturnButton = useMemo(() => canRequestReturn(pkg), [pkg]);
+
+  const returnStatusConfig = getReturnStatusConfig(pkg.returnStatus);
 
   const handleCopyTracking = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -59,6 +63,13 @@ export default function PackageCard({ pkg, index }: PackageCardProps) {
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowEditModal(true);
+  };
+
+  const handleRequestReturn = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm('确定要申请退货吗？\n退货后请及时在对应平台完成退货流程。')) {
+      updateReturnStatus(pkg.id, 'return_pending');
+    }
   };
 
   const handleCardClick = () => {
@@ -87,6 +98,7 @@ export default function PackageCard({ pkg, index }: PackageCardProps) {
           'hover:bg-white/10 hover:scale-[1.02] hover:shadow-xl',
           'border-l-4',
           statusBorderColor[pkg.status],
+          returnDeadlineInfo?.isUrgent && !returnDeadlineInfo.isExpired && 'border-l-red-500',
           isSelected && 'ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-950',
           batchMode && 'select-none'
         )}
@@ -129,7 +141,29 @@ export default function PackageCard({ pkg, index }: PackageCardProps) {
                   )}
                 </div>
               </div>
-              <StatusBadge status={pkg.status} size="sm" />
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {returnDeadlineInfo && !returnDeadlineInfo.isExpired && (
+                  <span className={cn(
+                    'px-2 py-0.5 rounded text-xs font-medium',
+                    returnDeadlineInfo.reminderLevel === 'critical' ? 'bg-red-500/20 text-red-400' :
+                    returnDeadlineInfo.reminderLevel === 'warning' ? 'bg-amber-500/20 text-amber-400' :
+                    'bg-blue-500/20 text-blue-400'
+                  )}>
+                    {returnDeadlineInfo.returnPolicyLabel}
+                  </span>
+                )}
+                {returnDeadlineInfo?.isExpired && pkg.returnStatus === 'none' && (
+                  <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-500/20 text-slate-500">
+                    退货期已过
+                  </span>
+                )}
+                {pkg.returnStatus !== 'none' && (
+                  <span className={cn('px-2 py-0.5 rounded text-xs font-medium', returnStatusConfig.bgColor, returnStatusConfig.color)}>
+                    {returnStatusConfig.label}
+                  </span>
+                )}
+                <StatusBadge status={pkg.status} size="sm" />
+              </div>
             </div>
             
             {pkg.trackingNumber && (
@@ -174,7 +208,7 @@ export default function PackageCard({ pkg, index }: PackageCardProps) {
                     returnDeadlineInfo.isExpired ? 'text-slate-500' :
                     returnDeadlineInfo.reminderLevel === 'critical' ? 'text-red-400' :
                     returnDeadlineInfo.reminderLevel === 'warning' ? 'text-amber-400' :
-                    'text-slate-500'
+                    'text-blue-400'
                   )}>
                     {returnDeadlineInfo.isExpired ? (
                       <Clock className="w-3.5 h-3.5" />
@@ -213,7 +247,17 @@ export default function PackageCard({ pkg, index }: PackageCardProps) {
                 
                 {!batchMode && (
                   <>
-                    {canMarkAsOpened(pkg.status) && (
+                    {showReturnButton && (
+                      <button
+                        onClick={handleRequestReturn}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 transition-colors"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        <span>申请退货</span>
+                      </button>
+                    )}
+                    
+                    {canMarkAsOpened(pkg.status) && pkg.returnStatus === 'none' && (
                       <button
                         onClick={handleMarkOpened}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30 transition-colors"

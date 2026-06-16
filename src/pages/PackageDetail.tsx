@@ -1,13 +1,15 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Copy, Check, Trash2, PackageOpen, Calendar, Truck, ShoppingBag, Building, FileText, Layers, Unlink, Pencil } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowLeft, Copy, Check, Trash2, PackageOpen, Calendar, Truck, ShoppingBag, Building, FileText, Layers, Unlink, Pencil, Clock, AlertTriangle, RotateCcw, ChevronRight } from 'lucide-react';
+import { useState, useMemo } from 'react';
 import { usePackageStore, usePackageById, useChildPackages } from '@/store/usePackageStore';
+import { useReturnSettingsStore } from '@/store/useReturnSettingsStore';
 import StatusBadge from '@/components/StatusBadge';
 import LogisticsTimeline from '@/components/LogisticsTimeline';
 import { getPlatformIcon } from '@/utils/platformUtils';
 import { formatDate, formatDateTime, getArrivalText, canMarkAsOpened, getNextStatus } from '@/utils/statusUtils';
 import { formatTrackingNumber } from '@/utils/carrierUtils';
 import { statusConfig } from '@/utils/statusUtils';
+import { getReturnDeadlineInfo, getReturnDeadlineText, formatReturnDeadline, canRequestReturn, getReturnStatusConfig, getReturnGuideSteps } from '@/utils/returnUtils';
 import { cn } from '@/lib/utils';
 import Modal from '@/components/Modal';
 import EditPackageForm from '@/components/EditPackageForm';
@@ -17,10 +19,21 @@ export default function PackageDetail() {
   const navigate = useNavigate();
   const pkg = usePackageById(id);
   const childPackages = useChildPackages(id || '');
-  const { markAsOpened, updateStatus, deletePackage, unmergePackage } = usePackageStore();
+  const { markAsOpened, updateStatus, deletePackage, unmergePackage, updateReturnStatus } = usePackageStore();
+  const { getReturnDaysForPlatform } = useReturnSettingsStore();
   const [copied, setCopied] = useState(false);
   const [showChildren, setShowChildren] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showReturnGuide, setShowReturnGuide] = useState(false);
+
+  const returnDeadlineInfo = useMemo(() => {
+    if (!pkg) return null;
+    const returnDays = getReturnDaysForPlatform(pkg.platform);
+    return getReturnDeadlineInfo(pkg, returnDays);
+  }, [pkg, getReturnDaysForPlatform]);
+
+  const showReturnButton = useMemo(() => pkg ? canRequestReturn(pkg) : false, [pkg]);
+  const returnStatusConfig = pkg ? getReturnStatusConfig(pkg.returnStatus) : null;
 
   if (!pkg) {
     return (
@@ -75,10 +88,28 @@ export default function PackageDetail() {
     }
   };
 
+  const handleRequestReturn = () => {
+    if (confirm('确定要申请退货吗？\n退货后请及时在对应平台完成退货流程。')) {
+      updateReturnStatus(pkg.id, 'return_pending');
+      setShowReturnGuide(true);
+    }
+  };
+
+  const handleUpdateReturnStatus = (status: 'return_shipped' | 'returned') => {
+    const labels: Record<string, string> = {
+      return_shipped: '已寄回商品',
+      returned: '已完成退货',
+    };
+    if (confirm(`确定要将退货状态更新为"${labels[status]}"吗？`)) {
+      updateReturnStatus(pkg.id, status);
+    }
+  };
+
   const PlatformIcon = getPlatformIcon(pkg.platform);
   const nextStatus = getNextStatus(pkg.status);
   const hasChildren = pkg.childIds.length > 0;
   const hasParent = pkg.parentId !== null;
+  const returnGuideSteps = getReturnGuideSteps(pkg.platform);
 
   const infoItems = [
     {
@@ -165,10 +196,114 @@ export default function PackageDetail() {
                     <h1 className="text-2xl font-bold text-white font-display mb-1">
                       {pkg.productName}
                     </h1>
-                    <StatusBadge status={pkg.status} />
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={pkg.status} />
+                      {returnDeadlineInfo && !returnDeadlineInfo.isExpired && (
+                        <span className={cn(
+                          'px-2 py-0.5 rounded text-xs font-medium',
+                          returnDeadlineInfo.reminderLevel === 'critical' ? 'bg-red-500/20 text-red-400' :
+                          returnDeadlineInfo.reminderLevel === 'warning' ? 'bg-amber-500/20 text-amber-400' :
+                          'bg-blue-500/20 text-blue-400'
+                        )}>
+                          {returnDeadlineInfo.returnPolicyLabel}
+                        </span>
+                      )}
+                      {returnDeadlineInfo?.isExpired && pkg.returnStatus === 'none' && (
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-500/20 text-slate-500">
+                          退货期已过
+                        </span>
+                      )}
+                      {pkg.returnStatus !== 'none' && returnStatusConfig && (
+                        <span className={cn('px-2 py-0.5 rounded text-xs font-medium', returnStatusConfig.bgColor, returnStatusConfig.color)}>
+                          {returnStatusConfig.label}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
+
+              {returnDeadlineInfo && (
+                <div className={cn(
+                  'p-4 rounded-xl mb-6',
+                  returnDeadlineInfo.isExpired ? 'bg-slate-500/10 border border-slate-500/20' :
+                  returnDeadlineInfo.reminderLevel === 'critical' ? 'bg-red-500/10 border border-red-500/20' :
+                  returnDeadlineInfo.reminderLevel === 'warning' ? 'bg-amber-500/10 border border-amber-500/20' :
+                  'bg-blue-500/10 border border-blue-500/20'
+                )}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        'p-2 rounded-xl',
+                        returnDeadlineInfo.isExpired ? 'bg-slate-500/20' :
+                        returnDeadlineInfo.reminderLevel === 'critical' ? 'bg-red-500/20' :
+                        returnDeadlineInfo.reminderLevel === 'warning' ? 'bg-amber-500/20' :
+                        'bg-blue-500/20'
+                      )}>
+                        {returnDeadlineInfo.isExpired ? (
+                          <Clock className={cn(
+                            'w-5 h-5',
+                            returnDeadlineInfo.isExpired ? 'text-slate-400' :
+                            returnDeadlineInfo.reminderLevel === 'critical' ? 'text-red-400' :
+                            returnDeadlineInfo.reminderLevel === 'warning' ? 'text-amber-400' :
+                            'text-blue-400'
+                          )} />
+                        ) : returnDeadlineInfo.isUrgent ? (
+                          <AlertTriangle className="w-5 h-5 text-red-400" />
+                        ) : (
+                          <Clock className="w-5 h-5 text-blue-400" />
+                        )}
+                      </div>
+                      <div>
+                        <p className={cn(
+                          'font-medium',
+                          returnDeadlineInfo.isExpired ? 'text-slate-400' :
+                          returnDeadlineInfo.reminderLevel === 'critical' ? 'text-red-400' :
+                          returnDeadlineInfo.reminderLevel === 'warning' ? 'text-amber-400' :
+                          'text-blue-400'
+                        )}>
+                          {getReturnDeadlineText(returnDeadlineInfo)}
+                        </p>
+                        <p className="text-sm text-slate-500">
+                          签收日期 {formatDate(pkg.deliveredDate)} · 截止 {formatReturnDeadline(returnDeadlineInfo.deadlineDate)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className={cn(
+                        'text-3xl font-bold font-display',
+                        returnDeadlineInfo.isExpired ? 'text-slate-500' :
+                        returnDeadlineInfo.remainingDays <= 1 ? 'text-red-400' :
+                        returnDeadlineInfo.remainingDays <= 2 ? 'text-amber-400' :
+                        'text-blue-400'
+                      )}>
+                        {returnDeadlineInfo.isExpired ? '已过期' : `${returnDeadlineInfo.remainingDays}`}
+                      </div>
+                      {!returnDeadlineInfo.isExpired && (
+                        <p className="text-xs text-slate-500">天</p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {!returnDeadlineInfo.isExpired && returnDeadlineInfo.remainingDays > 0 && (
+                    <div className="mt-3">
+                      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div
+                          className={cn(
+                            'h-full rounded-full transition-all',
+                            returnDeadlineInfo.remainingDays <= 1 ? 'bg-red-500' :
+                            returnDeadlineInfo.remainingDays <= 2 ? 'bg-amber-500' :
+                            'bg-blue-500'
+                          )}
+                          style={{ 
+                            width: `${Math.min(100, ((returnDeadlineInfo.returnDays - returnDeadlineInfo.remainingDays) / returnDeadlineInfo.returnDays) * 100)}%` 
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {pkg.trackingNumber && (
                 <div className="flex items-center gap-3 p-4 bg-white/5 rounded-xl mb-6">
@@ -283,7 +418,37 @@ export default function PackageDetail() {
               )}
 
               <div className="flex flex-wrap gap-3 mt-6 pt-6 border-t border-white/10">
-                {canMarkAsOpened(pkg.status) && (
+                {showReturnButton && (
+                  <button
+                    onClick={handleRequestReturn}
+                    className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 bg-amber-500/20 text-amber-400 rounded-xl hover:bg-amber-500/30 transition-colors font-medium"
+                  >
+                    <RotateCcw className="w-5 h-5" />
+                    <span>申请退货</span>
+                  </button>
+                )}
+                
+                {pkg.returnStatus === 'return_pending' && (
+                  <button
+                    onClick={() => handleUpdateReturnStatus('return_shipped')}
+                    className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 bg-blue-500/20 text-blue-400 rounded-xl hover:bg-blue-500/30 transition-colors font-medium"
+                  >
+                    <Truck className="w-5 h-5" />
+                    <span>已寄回商品</span>
+                  </button>
+                )}
+
+                {pkg.returnStatus === 'return_shipped' && (
+                  <button
+                    onClick={() => handleUpdateReturnStatus('returned')}
+                    className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 bg-emerald-500/20 text-emerald-400 rounded-xl hover:bg-emerald-500/30 transition-colors font-medium"
+                  >
+                    <Check className="w-5 h-5" />
+                    <span>确认退货完成</span>
+                  </button>
+                )}
+
+                {canMarkAsOpened(pkg.status) && pkg.returnStatus === 'none' && (
                   <button
                     onClick={handleMarkOpened}
                     className="flex-1 min-w-[140px] btn-primary flex items-center justify-center gap-2"
@@ -304,6 +469,79 @@ export default function PackageDetail() {
                 )}
               </div>
             </div>
+
+            {showReturnGuide && pkg.returnStatus !== 'none' && (
+              <div className="glass-card p-6 mb-6 animate-slide-up" style={{ animationDelay: '0.05s' }}>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-white font-display flex items-center gap-2">
+                    <RotateCcw className="w-5 h-5 text-amber-400" />
+                    退货流程指引
+                  </h2>
+                  <button
+                    onClick={() => setShowReturnGuide(false)}
+                    className="text-slate-400 hover:text-white transition-colors text-sm"
+                  >
+                    收起
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {returnGuideSteps.map((step, idx) => (
+                    <div key={step.step} className="flex gap-3">
+                      <div className={cn(
+                        'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold',
+                        idx < (
+                          pkg.returnStatus === 'returned' ? 5 :
+                          pkg.returnStatus === 'return_shipped' ? 4 :
+                          1
+                        ) ? 'bg-emerald-500/20 text-emerald-400' :
+                        idx === (
+                          pkg.returnStatus === 'returned' ? 4 :
+                          pkg.returnStatus === 'return_shipped' ? 3 :
+                          0
+                        ) ? 'bg-amber-500/20 text-amber-400' :
+                        'bg-white/5 text-slate-500'
+                      )}>
+                        {idx < (
+                          pkg.returnStatus === 'returned' ? 5 :
+                          pkg.returnStatus === 'return_shipped' ? 4 :
+                          1
+                        ) ? (
+                          <Check className="w-4 h-4" />
+                        ) : (
+                          step.step
+                        )}
+                      </div>
+                      <div>
+                        <p className={cn(
+                          'font-medium',
+                          idx <= (
+                            pkg.returnStatus === 'returned' ? 4 :
+                            pkg.returnStatus === 'return_shipped' ? 3 :
+                            0
+                          ) ? 'text-white' : 'text-slate-500'
+                        )}>
+                          {step.title}
+                        </p>
+                        <p className="text-sm text-slate-400">{step.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!showReturnGuide && pkg.returnStatus !== 'none' && (
+              <button
+                onClick={() => setShowReturnGuide(true)}
+                className="w-full glass-card p-4 mb-6 flex items-center justify-between hover:bg-white/5 transition-colors animate-slide-up"
+              >
+                <div className="flex items-center gap-2 text-amber-400">
+                  <RotateCcw className="w-5 h-5" />
+                  <span className="font-medium">查看退货流程指引</span>
+                </div>
+                <ChevronRight className="w-5 h-5 text-slate-400" />
+              </button>
+            )}
 
             <div className="glass-card p-6 animate-slide-up" style={{ animationDelay: '0.1s' }}>
               <h2 className="text-xl font-semibold text-white font-display mb-6 flex items-center gap-2">
