@@ -95,6 +95,20 @@ export default function PackageDetail() {
     }
   };
 
+  const handleNoAccessories = () => {
+    if (pkg) {
+      const emptyChecklist: AccessoryChecklistType = {
+        items: [],
+        templateId: null,
+        completed: true,
+        completedAt: new Date(),
+      };
+      markAsOpened(pkg.id);
+      updateAccessoryChecklist(pkg.id, emptyChecklist);
+      setShowUnpackModal(false);
+    }
+  };
+
   const handleUpdateStatus = () => {
     const nextStatus = getNextStatus(pkg.status);
     if (nextStatus) {
@@ -437,7 +451,7 @@ export default function PackageDetail() {
                 </div>
               )}
 
-              {(pkg.isOpened || (pkg.accessoryChecklist && pkg.accessoryChecklist.items.length > 0)) && (
+              {pkg.isOpened && (
                 <div className="mt-4 p-4 bg-white/5 rounded-xl">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
@@ -448,26 +462,27 @@ export default function PackageDetail() {
                           · 于 {formatDate(pkg.accessoryChecklist.completedAt)} 完成核对
                         </span>
                       )}
+                      {pkg.accessoryChecklist?.items.length === 0 && pkg.accessoryChecklist?.completed && (
+                        <span className="text-xs text-slate-500 ml-1">
+                          (无配件赠品)
+                        </span>
+                      )}
                     </div>
-                    {pkg.accessoryChecklist && pkg.accessoryChecklist.items.length > 0 && (
-                      <div className="flex items-center gap-2">
-                        {pkg.isOpened && (
-                          <button
-                            onClick={() => setShowTemplateManager(true)}
-                            className="text-xs text-slate-400 hover:text-white transition-colors"
-                          >
-                            模板管理
-                          </button>
-                        )}
-                        <button
-                          onClick={() => setIsEditingChecklist(!isEditingChecklist)}
-                          className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                          {isEditingChecklist ? '完成编辑' : '编辑'}
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setShowTemplateManager(true)}
+                        className="text-xs text-slate-400 hover:text-white transition-colors"
+                      >
+                        模板管理
+                      </button>
+                      <button
+                        onClick={() => setIsEditingChecklist(!isEditingChecklist)}
+                        className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        {isEditingChecklist ? '完成编辑' : '编辑'}
+                      </button>
+                    </div>
                   </div>
                   {pkg.accessoryChecklist && pkg.accessoryChecklist.items.length > 0 ? (
                     <AccessoryChecklist
@@ -476,8 +491,19 @@ export default function PackageDetail() {
                       readOnly={!isEditingChecklist}
                     />
                   ) : (
-                    <div className="text-center py-4 text-slate-500 text-sm">
-                      拆包时可录入配件核对清单
+                    <div className="space-y-3">
+                      <div className="text-center py-4 text-slate-500 text-sm">
+                        {pkg.accessoryChecklist?.completed 
+                          ? '当前标记为无配件赠品，点击编辑可添加配件项'
+                          : '拆包时可录入配件核对清单'}
+                      </div>
+                      {isEditingChecklist && (
+                        <AccessoryChecklist
+                          checklist={pkg.accessoryChecklist || { items: [], templateId: null, completed: false, completedAt: null }}
+                          onChange={handleChecklistChange}
+                          readOnly={false}
+                        />
+                      )}
                     </div>
                   )}
                 </div>
@@ -655,6 +681,7 @@ export default function PackageDetail() {
           onClose={() => setShowUnpackModal(false)}
           pkg={pkg}
           onConfirm={handleUnpackConfirm}
+          onNoAccessories={handleNoAccessories}
         />
       )}
 

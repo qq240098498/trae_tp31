@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronRight, PackageOpen, Check, Copy, Trash2, Layers, Pencil, Clock, AlertTriangle, RotateCcw } from 'lucide-react';
 import { usePackageStore, useChildPackages } from '@/store/usePackageStore';
 import { useReturnSettingsStore } from '@/store/useReturnSettingsStore';
-import type { Package } from '@/types';
+import type { Package, AccessoryChecklist as AccessoryChecklistType } from '@/types';
 import StatusBadge from './StatusBadge';
 import { getPlatformIcon } from '@/utils/platformUtils';
 import { formatDate, getArrivalText, canMarkAsOpened } from '@/utils/statusUtils';
@@ -12,6 +12,7 @@ import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import Modal from './Modal';
 import EditPackageForm from './EditPackageForm';
+import UnpackChecklistModal from './UnpackChecklistModal';
 
 interface PackageCardProps {
   pkg: Package;
@@ -20,12 +21,13 @@ interface PackageCardProps {
 
 export default function PackageCard({ pkg, index }: PackageCardProps) {
   const navigate = useNavigate();
-  const { batchMode, selectedIds, toggleSelection, markAsOpened, deletePackage, updateReturnStatus } = usePackageStore();
+  const { batchMode, selectedIds, toggleSelection, markAsOpened, deletePackage, updateReturnStatus, updateAccessoryChecklist } = usePackageStore();
   const { getReturnDaysForPlatform } = useReturnSettingsStore();
   const childPackages = useChildPackages(pkg.id);
   const [showChildren, setShowChildren] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showUnpackModal, setShowUnpackModal] = useState(false);
   const isSelected = selectedIds.includes(pkg.id);
   const PlatformIcon = getPlatformIcon(pkg.platform);
   const hasChildren = pkg.childIds.length > 0;
@@ -50,7 +52,24 @@ export default function PackageCard({ pkg, index }: PackageCardProps) {
 
   const handleMarkOpened = (e: React.MouseEvent) => {
     e.stopPropagation();
+    setShowUnpackModal(true);
+  };
+
+  const handleUnpackConfirm = (checklist: AccessoryChecklistType) => {
     markAsOpened(pkg.id);
+    updateAccessoryChecklist(pkg.id, checklist);
+  };
+
+  const handleNoAccessories = () => {
+    const emptyChecklist: AccessoryChecklistType = {
+      items: [],
+      templateId: null,
+      completed: true,
+      completedAt: new Date(),
+    };
+    markAsOpened(pkg.id);
+    updateAccessoryChecklist(pkg.id, emptyChecklist);
+    setShowUnpackModal(false);
   };
 
   const handleDelete = (e: React.MouseEvent) => {
@@ -336,6 +355,14 @@ export default function PackageCard({ pkg, index }: PackageCardProps) {
           onSuccess={() => setShowEditModal(false)}
         />
       </Modal>
+
+      <UnpackChecklistModal
+        isOpen={showUnpackModal}
+        onClose={() => setShowUnpackModal(false)}
+        pkg={pkg}
+        onConfirm={handleUnpackConfirm}
+        onNoAccessories={handleNoAccessories}
+      />
     </div>
   );
 }

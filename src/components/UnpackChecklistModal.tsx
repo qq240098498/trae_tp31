@@ -12,6 +12,7 @@ interface UnpackChecklistModalProps {
   onClose: () => void;
   pkg: Package;
   onConfirm: (checklist: AccessoryChecklistType) => void;
+  onNoAccessories?: () => void;
 }
 
 export default function UnpackChecklistModal({
@@ -19,6 +20,7 @@ export default function UnpackChecklistModal({
   onClose,
   pkg,
   onConfirm,
+  onNoAccessories,
 }: UnpackChecklistModalProps) {
   const { templates, getSuggestedTemplates, addTemplate, incrementUsage } = useAccessoryTemplateStore();
   const [checklist, setChecklist] = useState<AccessoryChecklistType>(() => {
@@ -238,20 +240,28 @@ export default function UnpackChecklistModal({
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-white/10">
+        <div className="flex items-center justify-between p-6 border-t border-white/10">
           <button
-            onClick={onClose}
-            className="px-6 py-2.5 bg-white/5 text-slate-300 rounded-xl hover:bg-white/10 transition-colors font-medium"
+            onClick={onNoAccessories}
+            className="px-4 py-2.5 bg-slate-500/20 text-slate-300 rounded-xl hover:bg-slate-500/30 transition-colors text-sm font-medium"
           >
-            跳过核对
+            无配件赠品
           </button>
-          <button
-            onClick={handleConfirm}
-            className="px-6 py-2.5 btn-primary flex items-center gap-2 font-medium"
-          >
-            <PackageOpen className="w-5 h-5" />
-            完成拆包
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onClose}
+              className="px-6 py-2.5 bg-white/5 text-slate-300 rounded-xl hover:bg-white/10 transition-colors font-medium"
+            >
+              跳过核对
+            </button>
+            <button
+              onClick={handleConfirm}
+              className="px-6 py-2.5 btn-primary flex items-center gap-2 font-medium"
+            >
+              <PackageOpen className="w-5 h-5" />
+              完成拆包
+            </button>
+          </div>
         </div>
       </div>
 
