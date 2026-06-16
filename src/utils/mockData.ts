@@ -1,5 +1,14 @@
-import type { Package, LogisticsEvent, PackageStatus } from '@/types';
+import type { Package, LogisticsEvent, PackageStatus, AccessoryChecklist } from '@/types';
 import { detectCarrier } from './carrierUtils';
+
+function createEmptyChecklist(): AccessoryChecklist {
+  return {
+    items: [],
+    templateId: null,
+    completed: false,
+    completedAt: null,
+  };
+}
 
 const cities = [
   '上海市', '杭州市', '广州市', '深圳市', '成都市',
@@ -152,6 +161,7 @@ export function createMockPackage(
     createdAt: new Date(),
     updatedAt: new Date(),
     logisticsEvents,
+    accessoryChecklist: createEmptyChecklist(),
   };
 }
 
@@ -192,6 +202,7 @@ export function createManualPackage(
         timestamp: createdAt,
       },
     ],
+    accessoryChecklist: createEmptyChecklist(),
   };
 }
 
@@ -233,6 +244,7 @@ export function createDeliveredPackage(
     createdAt: shippedDate,
     updatedAt: new Date(),
     logisticsEvents: events,
+    accessoryChecklist: createEmptyChecklist(),
   };
 }
 
@@ -283,6 +295,7 @@ export function addLogisticsEvent(
     status,
     logisticsEvents: [...pkg.logisticsEvents, newEvent],
     updatedAt: new Date(),
+    accessoryChecklist: pkg.accessoryChecklist || createEmptyChecklist(),
   };
   
   if (status === 'shipped') {

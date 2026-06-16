@@ -1,11 +1,31 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Package, PackageStatus, FilterStatus, PackageStore, ReturnStatus } from '@/types';
+import type { Package, PackageStatus, FilterStatus, PackageStore, ReturnStatus, AccessoryChecklist, AccessoryItem } from '@/types';
 import { createMockPackage, createManualPackage, addLogisticsEvent, generateSamplePackages } from '@/utils/mockData';
 import { canTransitionTo } from '@/utils/statusUtils';
 
 function generateId(): string {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
+
+function createEmptyChecklist(): AccessoryChecklist {
+  return {
+    items: [],
+    templateId: null,
+    completed: false,
+    completedAt: null,
+  };
+}
+
+function reviveChecklist(checklist?: AccessoryChecklist): AccessoryChecklist {
+  if (!checklist) {
+    return createEmptyChecklist();
+  }
+  return {
+    ...checklist,
+    completedAt: checklist.completedAt ? new Date(checklist.completedAt) : null,
+    items: checklist.items || [],
+  };
 }
 
 function reviveDates(pkg: Package): Package {
@@ -22,6 +42,27 @@ function reviveDates(pkg: Package): Package {
       ...event,
       timestamp: new Date(event.timestamp),
     })),
+    accessoryChecklist: reviveChecklist(pkg.accessoryChecklist),
+  };
+}
+
+function generateAccessoryId(): string {
+  return Math.random().toString(36).substring(2, 15);
+}
+
+export function createChecklistFromItems(itemNames: string[], templateId?: string | null): AccessoryChecklist {
+  const items: AccessoryItem[] = itemNames.map(name => ({
+    id: generateAccessoryId(),
+    name,
+    checked: false,
+    remark: '',
+  }));
+
+  return {
+    items,
+    templateId: templateId ?? null,
+    completed: false,
+    completedAt: null,
   };
 }
 
@@ -68,15 +109,19 @@ export const usePackageStore = create<PackageStore>()(
                 timestamp: now,
               },
             ],
+            accessoryChecklist: createEmptyChecklist(),
           };
           newPkg.logisticsEvents[0].packageId = newPkg.id;
         } else {
-          newPkg = createManualPackage(
-            pkgData.platform,
-            pkgData.productName,
-            pkgData.estimatedArrival,
-            pkgData.notes
-          );
+          newPkg = {
+            ...createManualPackage(
+              pkgData.platform,
+              pkgData.productName,
+              pkgData.estimatedArrival,
+              pkgData.notes
+            ),
+            accessoryChecklist: createEmptyChecklist(),
+          };
         }
 
         set((state) => ({
@@ -217,6 +262,7 @@ export const usePackageStore = create<PackageStore>()(
             id: generateId(),
             createdAt: new Date(),
             updatedAt: new Date(),
+            accessoryChecklist: createEmptyChecklist(),
           };
         });
 
@@ -306,6 +352,14 @@ export const usePackageStore = create<PackageStore>()(
         set((state) => ({
           packages: state.packages.map((pkg) =>
             pkg.id === id ? { ...pkg, returnStatus, updatedAt: new Date() } : pkg
+          ),
+        }));
+      },
+
+      updateAccessoryChecklist: (id, checklist) => {
+        set((state) => ({
+          packages: state.packages.map((pkg) =>
+            pkg.id === id ? { ...pkg, accessoryChecklist: checklist, updatedAt: new Date() } : pkg
           ),
         }));
       },

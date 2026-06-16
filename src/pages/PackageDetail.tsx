@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Copy, Check, Trash2, PackageOpen, Calendar, Truck, ShoppingBag, Building, FileText, Layers, Unlink, Pencil, Clock, AlertTriangle, RotateCcw, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Copy, Check, Trash2, PackageOpen, Calendar, Truck, ShoppingBag, Building, FileText, Layers, Unlink, Pencil, Clock, AlertTriangle, RotateCcw, ChevronRight, ListChecks, Edit3 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { usePackageStore, usePackageById, useChildPackages } from '@/store/usePackageStore';
 import { useReturnSettingsStore } from '@/store/useReturnSettingsStore';
@@ -13,18 +13,25 @@ import { getReturnDeadlineInfo, getReturnDeadlineText, formatReturnDeadline, can
 import { cn } from '@/lib/utils';
 import Modal from '@/components/Modal';
 import EditPackageForm from '@/components/EditPackageForm';
+import UnpackChecklistModal from '@/components/UnpackChecklistModal';
+import AccessoryChecklist from '@/components/AccessoryChecklist';
+import AccessoryTemplateManager from '@/components/AccessoryTemplateManager';
+import type { AccessoryChecklist as AccessoryChecklistType } from '@/types';
 
 export default function PackageDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const pkg = usePackageById(id);
   const childPackages = useChildPackages(id || '');
-  const { markAsOpened, updateStatus, deletePackage, unmergePackage, updateReturnStatus } = usePackageStore();
+  const { markAsOpened, updateStatus, deletePackage, unmergePackage, updateReturnStatus, updateAccessoryChecklist } = usePackageStore();
   const { getReturnDaysForPlatform } = useReturnSettingsStore();
   const [copied, setCopied] = useState(false);
   const [showChildren, setShowChildren] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showReturnGuide, setShowReturnGuide] = useState(false);
+  const [showUnpackModal, setShowUnpackModal] = useState(false);
+  const [showTemplateManager, setShowTemplateManager] = useState(false);
+  const [isEditingChecklist, setIsEditingChecklist] = useState(false);
 
   const returnDeadlineInfo = useMemo(() => {
     if (!pkg) return null;
@@ -72,7 +79,20 @@ export default function PackageDetail() {
   };
 
   const handleMarkOpened = () => {
-    markAsOpened(pkg.id);
+    setShowUnpackModal(true);
+  };
+
+  const handleUnpackConfirm = (checklist: AccessoryChecklistType) => {
+    if (pkg) {
+      markAsOpened(pkg.id);
+      updateAccessoryChecklist(pkg.id, checklist);
+    }
+  };
+
+  const handleChecklistChange = (checklist: AccessoryChecklistType) => {
+    if (pkg) {
+      updateAccessoryChecklist(pkg.id, checklist);
+    }
   };
 
   const handleUpdateStatus = () => {
@@ -417,6 +437,52 @@ export default function PackageDetail() {
                 </div>
               )}
 
+              {(pkg.isOpened || (pkg.accessoryChecklist && pkg.accessoryChecklist.items.length > 0)) && (
+                <div className="mt-4 p-4 bg-white/5 rounded-xl">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <ListChecks className="w-4 h-4 text-blue-400" />
+                      <span className="text-sm font-medium text-white">赠品/配件核对清单</span>
+                      {pkg.accessoryChecklist?.completed && pkg.accessoryChecklist.completedAt && (
+                        <span className="text-xs text-slate-500">
+                          · 于 {formatDate(pkg.accessoryChecklist.completedAt)} 完成核对
+                        </span>
+                      )}
+                    </div>
+                    {pkg.accessoryChecklist && pkg.accessoryChecklist.items.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        {pkg.isOpened && (
+                          <button
+                            onClick={() => setShowTemplateManager(true)}
+                            className="text-xs text-slate-400 hover:text-white transition-colors"
+                          >
+                            模板管理
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setIsEditingChecklist(!isEditingChecklist)}
+                          className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          {isEditingChecklist ? '完成编辑' : '编辑'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {pkg.accessoryChecklist && pkg.accessoryChecklist.items.length > 0 ? (
+                    <AccessoryChecklist
+                      checklist={pkg.accessoryChecklist}
+                      onChange={handleChecklistChange}
+                      readOnly={!isEditingChecklist}
+                    />
+                  ) : (
+                    <div className="text-center py-4 text-slate-500 text-sm">
+                      拆包时可录入配件核对清单
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="flex flex-wrap gap-3 mt-6 pt-6 border-t border-white/10">
                 {showReturnButton && (
                   <button
@@ -582,6 +648,20 @@ export default function PackageDetail() {
           onSuccess={() => setShowEditModal(false)}
         />
       </Modal>
+
+      {pkg && (
+        <UnpackChecklistModal
+          isOpen={showUnpackModal}
+          onClose={() => setShowUnpackModal(false)}
+          pkg={pkg}
+          onConfirm={handleUnpackConfirm}
+        />
+      )}
+
+      <AccessoryTemplateManager
+        isOpen={showTemplateManager}
+        onClose={() => setShowTemplateManager(false)}
+      />
     </div>
   );
 }
